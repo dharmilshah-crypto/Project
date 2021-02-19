@@ -1,5 +1,5 @@
 const User = require('./../Models/userModel') 
-const nodeMailer = require('nodemailer')
+const nodemailer = require('nodemailer')
 const jwt = require('jsonwebtoken')
 const {promisify} = require('util')
 
@@ -7,22 +7,43 @@ const {promisify} = require('util')
 
 exports.mailHandler = async(req,res,next)=>{
     try{
-        // let transporter = nodemailer.createTransport({
-        //     host: "smtp.gmail.com",
-        //     port: 465,
-        //     secure: true,
-        //     service : 'Gmail',
+        let a =Math.random()
+        a=String(a)
+        a=a.substring(2,6)
+        console.log(a)
+        process.env.otp = a
+        let message = {
+            from: "rp218428@gmail.com",
+            to: "nevate1356@geeky83.com",
+            subject: "OTP",
+            text: "Plaintext version of the message",
+            html: `<p>OTP</p>
+                      <p>${a}</p>`
+          }
+          console.log("message generated")
+        let transporter = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
+            service : 'Gmail',
             
-        //     auth: {
-        //       user: '',
-        //       pass: '',
-        //     }
+            auth: {
+              user: 'rp218428@gmail.com',
+              pass: '98934196'
+            }
             
-        // })
+        })
+        console.log("message sent")
+
+        transporter.sendMail(message, (err, info) => {
+            console.log(info.envelope);
+            console.log(info.messageId);
+        });
+        res.status(404).send("OTP sent")
 next()
     }
     catch(err){
-
+        res.status(404).send(err.message,err.name)
     }
 }
 
@@ -90,25 +111,45 @@ exports.protect = async (req,res,next)=>{
        
         token = req.headers.authorization.split(' ')[1]
     }
-    if(!token)
+ 
+    if(token == undefined)
     throw new Error('You are not logged in',401)
      
   
     const decoded = await promisify(jwt.verify)(token,'secret')
+  
     next()
     }
     catch(err){
+       
         if(err.name === "TokenExpiredError"){
-            res.status(401).send('Expired taken ,Please Login again')
+            res.status(401).send('Expired token ,Please Login again')
         }
         else if(err.name === "SyntaxError"){
-            res.status(401).send('Invalid    taken ,Please Login again')
+            res.status(401).send('Invalid token ,Please Login again')
         }
+        else res.status(401).send(err.message)
         
     }
 }
 
+exports.checkOTP= async(req,res,next)=>{
+    try{
+    if(req.body.otp)
+    {
+        
+        if(req.body.otp == process.env.otp)
+        { process.env.otp = undefined
+            next()}
 
-// exports.test = (req,res){
-
-// }
+        else
+        throw new Error('OTP did not match ,please generate an OTP again')
+    }
+    else
+    throw new Error('OTP not found ,please generate an OTP again')
+}catch(err){
+    res.status(404).json({
+        "name" : err.name,
+       "message" : err.message})
+}
+}

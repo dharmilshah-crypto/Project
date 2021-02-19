@@ -3,13 +3,16 @@ const app = express()
 const router = express.Router()
 const authControllers = require('./../Controllers/authControllers')
 
-
+router
+.route('/generateotp')
+.get(authControllers.mailHandler) 
+ 
 
 router
 .route('/signup')
-.post(authControllers.signUp)  
+.post(authControllers.checkOTP,authControllers.signUp)  
 
-router
+ router
 .route('/login')
 .post(authControllers.logIn)
 

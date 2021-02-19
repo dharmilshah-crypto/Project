@@ -4,7 +4,7 @@ const app = express()
 const authRouter = require('./Routes/authRoutes')
 const userRouter = require('./Routes/userRoutes')
 const mongoose = require('mongoose')
-// const morgan = require('morgan');
+
 
 app.use(express.json())
 
