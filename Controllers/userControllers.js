@@ -143,7 +143,7 @@ exports.updateUser=async (req,res,next)=>{
                 
                 auth: {
                   user: 'rp218428@gmail.com',
-                  pass: '98934196'
+                  pass: ''
                 }
                 
             })
