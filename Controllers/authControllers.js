@@ -5,16 +5,18 @@ const {promisify} = require('util')
 
 
 
-exports.mailHandler = async(req,res,next)=>{
+exports.generateOTP = async(req,res,next)=>{
     try{
+        console.log("1")
         let a =Math.random()
         a=String(a)
         a=a.substring(2,6)
-        console.log(a)
-        process.env.otp = a
+        console.log(a) 
+
+        await User.updateOne({email : req.tempEmail},{otp : a})
         let message = {
             from: "rp218428@gmail.com",
-            to: "nevate1356@geeky83.com",
+            to: req.tempEmail,
             subject: "OTP",
             text: "Plaintext version of the message",
             html: `<p>OTP</p>
@@ -40,7 +42,6 @@ exports.mailHandler = async(req,res,next)=>{
             console.log(info.messageId);
         });
         res.status(404).send("OTP sent")
-next()
     }
     catch(err){
         res.status(404).send(err.message,err.name)
@@ -49,23 +50,21 @@ next()
 
 exports.signUp = async (req,res,next)=>{
     try{
+    
         
         const newUser = await User.create({
             name : req.body.name,
             email : req.body.email,
             password :req.body.password,
             confirmPassword : req.body.confirmPassword,
-            balance : 25
+            balance : 25,
+            isAdmin : false
         });
-        const token =jwt.sign({id : newUser._id},'secret',{expiresIn : '2m'})
-
+        
+         req.tempEmail = req.body.email
  
-    res.status(200).json({
-    status : "success",
-    token,
-    newUser,
-    message : "SignUp successfull "   
-})
+
+next();
 }
 catch(err)
 {
@@ -77,26 +76,34 @@ catch(err)
 exports.logIn = async (req,res,next)=>{
 
     try{
+        const user = await User.findOne({email : req.body.email})
+       console.log(user)
+
+    if(user.isVerified){
     const email = req.body.email
     const password = req.body.password
     if(!email || !password){
      throw new Error('Password or Email missing')
     }
 const user = await  User.findOne({email}).select('+password')
-console.log(user)
+
 
 if(!user || !await  user.correctPassword(password,user.password))
 {
     throw new Error('Password or Email Incorrect',401)
 }
 
-    const token = jwt.sign({id : user._id},'secret',{expiresIn : '30s'})
+    const token = jwt.sign({id : user._id},'secret',{expiresIn : '5m'})
+   
     res.status(200).json({
         status : "success",
         token,
+        user,
         message : "LogIn successfull "
     })
 }
+else throw new Error('You are not verified ,please verify yourself fisrt')
+    }
 catch(err)
 {
     res.status(400).send(err.message)
@@ -117,7 +124,8 @@ exports.protect = async (req,res,next)=>{
      
   
     const decoded = await promisify(jwt.verify)(token,'secret')
-  
+    req.tempId = decoded.id
+     console.log(req.tempId)
     next()
     }
     catch(err){
@@ -135,12 +143,25 @@ exports.protect = async (req,res,next)=>{
 
 exports.checkOTP= async(req,res,next)=>{
     try{
+
+        let user
+        let token
     if(req.body.otp)
     {
-        
-        if(req.body.otp == process.env.otp)
-        { process.env.otp = undefined
-            next()}
+        let user = await User.findOne({email : req.body.email})
+        console.log(user)
+        if(req.body.otp == user.otp)
+        { 
+         token = jwt.sign({id : user._id},'secret',{expiresIn : '10m'})
+         await User.updateOne({email : req.body.email},{isVerified : true}) 
+         await User.updateOne({email : req.body.email},{otp : undefined}) 
+         user = await User.findOne({email : req.body.email})
+         console.log(user)
+        res.status(200).json({
+            status : "success", 
+            token  
+        })
+        }
 
         else
         throw new Error('OTP did not match ,please generate an OTP again')
