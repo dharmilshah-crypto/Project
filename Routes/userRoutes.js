@@ -11,9 +11,13 @@ router
 
 router
 .route('/users/:id')
-.get(authControllers.protect,userControllers.getOneUser)
+.get( authControllers.protect,userControllers.getOneUser)
 .patch(authControllers.protect,userControllers.updateUser)
 .delete(authControllers.protect,userControllers.deleteUser)
+
+router
+.route('/transaction/:id')
+.post(authControllers.protect,userControllers.transaction)
 
 
 module.exports = router
