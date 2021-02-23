@@ -36,6 +36,16 @@ const userSchema = new mongoose.Schema({
             },
             balance : {
                 type : Number
+            },
+            isAdmin  : {
+                type : Boolean,
+                select : true
+            },
+            isVerified : {
+               type : Boolean
+            },
+            otp : {
+                type : Number
             }
 })
 userSchema.methods.correctPassword = async function(candidatePassword,userPassword){

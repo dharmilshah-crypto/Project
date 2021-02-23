@@ -1,6 +1,7 @@
 const User = require('../Models/userModel') 
 const jwt = require('jsonwebtoken')
 const nodemailer = require('nodemailer')
+const transaction = require('../Models/transactionModel')
 
 exports.getAllUsers=async (req,res,next)=>{
     try{
@@ -20,33 +21,37 @@ exports.getAllUsers=async (req,res,next)=>{
 
 exports.getOneUser =async (req,res,next) => {
     try{
-    const user = await User.findById(req.params.id)
-    if(!user)
-    {return  res.status(404).json({
-        staus :"fail",
-        message : "No user present with that Id"
+      
+    const user = await User.find({"email" : req.params.id})
+    console.log(user)
+    if(user[0])
+    {
+      res.status(201).json({
+        status : "success",
+        data :{
+          user
+        }
       })
+      
     }
     else{
-    res.status(201).json({
-      status : "success",
-      data :{
-        user
-      }
+    return  res.status(404).json({
+      staus :"fail",
+      message : "No user present with that Id"
     })
 }
       }
       catch(err){
-    res.status(404).json({
-      staus :"fail",
-      message : err
+      res.status(404).json({
+        staus :"fail",
+        message : "No user present with that Id"
     })
       }
 
 }
 exports.updateUser=async (req,res,next)=>{
     try{
-        const user = await User.findByIdAndUpdate(req.params.id,req.body,{
+        const user = await User.updateOne({email : req.params.id},req.body,{
           new :true,
           runValidators:true 
         })
@@ -74,7 +79,7 @@ exports.updateUser=async (req,res,next)=>{
 
         exports.deleteUser =async (req, res) => {
             try{
-              const user = await User.findByIdAndDelete(req.params.id)
+              const user = await User.deleteOne({email : req.params.id})
               console.log(user)
               if(!user)
           {
@@ -100,41 +105,57 @@ exports.updateUser=async (req,res,next)=>{
 
           exports.transaction = async (req,res,next)=>{
             try{
-              console.log("1")
+              const user = await User.findById(req.tempId)
               let temp
             let transactionAmount = req.body.transactionAmount
-            console.log(transactionAmount)
+            
             let senderId = req.params.id
-            console.log(senderId)
-            let recieverId = req.body.id
-            console.log(recieverId)
-            let senderBalance = await User.findById(senderId).select('balance')
-            console.log(senderBalance)
-            let receiverBalance = await User.findById(recieverId).select('balance')
-            console.log(receiverBalance)
+            
+            if(user.email !== req.params.id)
+            {
+              return res.status(404).send("Not logged in ,Please login  to perform transactions")
+            }
+            let receiverId = req.body.email
+            
+            let senderBalance = await User.findOne({email : senderId}).select('balance')
+       
+            let receiverBalance = await User.findOne({email : receiverId}).select('balance')
+           
             let receiver
             let sender
             if(transactionAmount<=senderBalance.balance)
             {
               temp = senderBalance.balance - transactionAmount
-               sender = await User.findByIdAndUpdate(senderId,{balance : `${temp}`},{
+                await User.updateOne({email : senderId},{balance : `${temp}`},{
                 new :true,
                 runValidators:true 
               })
               temp = receiverBalance.balance +  transactionAmount
-               receiver = await User.findByIdAndUpdate(recieverId,{balance : `${temp}`},{
+                await User.updateOne({email : receiverId},{balance : `${temp}`},{
                 new :true,
                 runValidators:true 
               })
+              sender = await User.findOne({email : senderId})
+              receiver = await User.findOne({email : receiverId})
+              
+
+              const transactionData = await transaction.create({
+                "sender" : sender.email,
+                "receiver" : receiver.email,
+                "transactionAmount" : transactionAmount,
+                "date" : new Date()
+              })
+
               
               let message = {
                 from: "rp218428@gmail.com",
-                to: "nevate1356@geeky83.com",
+                to: receiver.email,
                 subject: "Transaction Details",
                 text: "Plaintext version of the message",
                 html: `<p>Transaction details</p>
-                          <p><h1>${transactionAmount} Rs has been sent to you</h1></p>`
+                          <p><h1>$${transactionAmount} has been received from ${sender.email}</h1></p>`
               }
+
             let transporter = nodemailer.createTransport({
                 host: "smtp.gmail.com",
                 port: 465,
@@ -143,16 +164,26 @@ exports.updateUser=async (req,res,next)=>{
                 
                 auth: {
                   user: 'rp218428@gmail.com',
-                  pass: ''
+                  pass: '98934196'
                 }
                 
             })
-           
-    
             transporter.sendMail(message, (err, info) => {
                 console.log(info.envelope);
                 console.log(info.messageId);
             });
+              message = {
+              from: "rp218428@gmail.com",
+              to:sender.email ,
+              subject: "Transaction Details",
+              text: "Plaintext version of the message",
+              html: `<p>Transaction details</p>
+                        <p><h1>$${transactionAmount} has been sent from your account to ${receiver.email}</h1></p>`
+            }
+            transporter.sendMail(message, (err, info) => {
+              console.log(info.envelope);
+              console.log(info.messageId);
+          });
             res.status(404).json({
               status : "success",
               message : "Mail regarding transaction has been sent",

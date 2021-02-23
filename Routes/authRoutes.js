@@ -5,17 +5,20 @@ const authControllers = require('./../Controllers/authControllers')
 
 router
 .route('/generateotp')
-.get(authControllers.mailHandler) 
+.get() 
  
 
 router
 .route('/signup')
-.post(authControllers.checkOTP,authControllers.signUp)  
+.post(authControllers.signUp,authControllers.generateOTP)  
 
  router
 .route('/login')
 .post(authControllers.logIn)
 
+router
+.route('/otplogin')
+.post(authControllers.checkOTP)
 
 
 module.exports = router

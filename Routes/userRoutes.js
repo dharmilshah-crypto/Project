@@ -13,10 +13,10 @@ router
 .route('/users/:id')
 .get( authControllers.protect,userControllers.getOneUser)
 .patch(authControllers.protect,userControllers.updateUser)
-.delete(authControllers.protect,userControllers.deleteUser).get()
+.delete(authControllers.protect,userControllers.deleteUser)
 
 router
-.route('/users/transaction/:id')
+.route('/transaction/:id')
 .post(authControllers.protect,userControllers.transaction)
 
 
